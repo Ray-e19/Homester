@@ -1,3 +1,6 @@
+import React, { useState, useEffect } from 'react';
+import HomeScreen from './HomeScreen'; // Import the HomeScreen component
+
 export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -26,10 +29,8 @@ export default function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="flex flex-grow items-center justify-center text-center">
-        <h2 className="text-5xl font-semibold text-gray-800">
-          Welcome to Homester
-        </h2>
+      <main className="flex-grow">
+        <HomeScreen /> {/* Render the HomeScreen component here */}
       </main>
     </div>
   );
