@@ -21,9 +21,10 @@ const MapView = ({ listings = [], onMarkerClick }) => {
       className="rounded-lg mt-8 z-0"
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="© OpenStreetMap"
+        url="https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png"
+        attribution="© OpenStreetMap contributors"
       />
+
       {listings.map((listing) => (
         <Marker key={listing.id} position={[listing.lat, listing.lon]}>
           <Popup>

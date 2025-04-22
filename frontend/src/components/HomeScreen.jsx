@@ -5,6 +5,7 @@ import NavBar from "./NavBar";
 import HomePage from "./HomePage";
 import NewUserForm from "./NewUserForm";
 import NewListingForm from "./NewListingForm";
+import LoginForm from "./LoginForm";
 import ListingModal from "./ListingModal";
 import ConfirmationModal from "./ConfirmationModal";
 
@@ -168,6 +169,19 @@ const HomeScreen = () => {
       {activePage === "new-user" && (
         <NewUserForm
           onCreateUser={createNewUser}
+          onCancel={() => navigateTo("home")}
+        />
+      )}
+
+      {activePage === "login" && (
+        <LoginForm
+          onLogin={(user) => {
+            localStorage.setItem("homester-user", JSON.stringify(user));
+            setCurrentUser(user);
+            navigateTo("home");
+            setConfirmationMessage("Login successful!");
+            setShowConfirmation(true);
+          }}
           onCancel={() => navigateTo("home")}
         />
       )}
