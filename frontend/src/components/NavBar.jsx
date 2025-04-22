@@ -11,7 +11,9 @@ const NavBar = ({ currentUser, navigateTo, logout }) => {
         <ul className="flex space-x-8 items-center">
           {currentUser && (
             <li>
-              <span className="text-blue-400">Hi, {currentUser.name}!</span>
+              <span className="text-blue-400">
+                Hi, {currentUser.name || currentUser.username}!
+              </span>
             </li>
           )}
           {!currentUser && (
@@ -24,14 +26,28 @@ const NavBar = ({ currentUser, navigateTo, logout }) => {
               </button>
             </li>
           )}
-          <li>
-            <button
-              onClick={() => navigateTo("new-listing")}
-              className="text-lg text-gray-300 hover:text-blue-500"
-            >
-              New Listing
-            </button>
-          </li>
+          {!currentUser && (
+            <li>
+              <button
+                onClick={() => navigateTo("login")}
+                className="text-lg text-gray-300 hover:text-blue-500"
+              >
+                Login
+              </button>
+            </li>
+          )}
+
+          {currentUser && (
+            <li>
+              <button
+                onClick={() => navigateTo("new-listing")}
+                className="text-lg text-gray-300 hover:text-blue-500"
+              >
+                New Listing
+              </button>
+            </li>
+          )}
+
           {currentUser && (
             <li>
               <button
