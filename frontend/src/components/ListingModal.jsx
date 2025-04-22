@@ -27,7 +27,7 @@ const ListingModal = ({
         <div className="space-y-4">
           <img
             src={mainImage}
-            className="w-full h-96 object-cover rounded-lg"
+            className="w-full object-cover rounded-lg"
             alt={listing.title}
           />
           {listing.images.length > 1 && (
