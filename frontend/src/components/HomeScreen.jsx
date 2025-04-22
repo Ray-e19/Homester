@@ -34,8 +34,9 @@ const HomeScreen = () => {
       reviews: 124,
       amenities: ["WiFi", "Kitchen", "Washer", "Dryer"],
       images: [
-        "https://a0.muscache.com/im/pictures/miso/Hosting-619966061834034729/original/6a1f6e5d-8b0d-4e1b-9b8c-9b8c9b8c9b8c.jpeg",
-        "https://images.unsplash.com/photo-1584622650111-993a426fbf0a",
+        "https://images.unsplash.com/photo-1740795095446-22619b771ec7?q=80&w=1674&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1615874959474-d609969a20ed?auto=format&fit=crop&w=800&q=80",
       ],
       lat: 34.0522,
       lon: -118.2437,

@@ -70,6 +70,12 @@ const HomePage = ({
                   )}
 
                   <div className="relative">
+                    {/* Heart Icon */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <i className="far fa-heart text-white text-xl drop-shadow"></i>
+                    </div>
+
+                    {/* Image */}
                     <img
                       src={
                         listing.images?.[0] ||
@@ -83,18 +89,21 @@ const HomePage = ({
                       className="w-full h-48 object-cover"
                       alt={listing.title}
                     />
+
+                    {/* Price Tag */}
                     <div className="absolute bottom-3 left-3 price-tag bg-black bg-opacity-70 text-white px-2 py-1 rounded-md text-xs font-medium">
                       ${listing.price}/night
                     </div>
                   </div>
+
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <h3 className="font-semibold text-white">
                         {listing.title}
                       </h3>
-                      <div className="flex items-center">
-                        <i className="fas fa-star text-yellow-400 text-xs"></i>
-                        <span className="ml-1 text-sm">{listing.rating}</span>
+                      <div className="flex items-center text-sm font-medium">
+                        <i className="fas fa-star mr-1 text-yellow-400"></i>
+                        <span className="text-white">{listing.rating}</span>
                       </div>
                     </div>
                     <p className="text-gray-400 text-sm mt-1">
