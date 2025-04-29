@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "houses")
 public class House {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
