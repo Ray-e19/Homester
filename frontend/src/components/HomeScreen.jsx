@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 import Header from "./Header";
 import NavBar from "./NavBar";
@@ -20,39 +21,24 @@ const HomeScreen = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState("");
 
-  const defaultListings = [
-    {
-      id: 1,
-      title: "Modern Downtown Apartment",
-      description: "Stylish apartment in downtown LA with views.",
-      price: 120,
-      bedrooms: 2,
-      bathrooms: 1,
-      sqft: 850,
-      location: "Downtown Los Angeles",
-      address: "123 Main St, Los Angeles, CA",
-      rating: 4.92,
-      reviews: 124,
-      amenities: ["WiFi", "Kitchen", "Washer", "Dryer"],
-      images: [
-        "https://images.unsplash.com/photo-1740795095446-22619b771ec7?q=80&w=1674&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1615874959474-d609969a20ed?auto=format&fit=crop&w=800&q=80",
-      ],
-      lat: 34.0522,
-      lon: -118.2437,
-      userId: null,
-    },
-  ];
-
   useEffect(() => {
-    const savedListings = localStorage.getItem("homester-listings");
-    const savedUser = localStorage.getItem("homester-user");
-    const savedBookings = localStorage.getItem("homester-bookings");
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("http://localhost:8080/houses");
+        setListings(response.data);
+      } catch (error) {
+        console.error("Failed to fetch listings:", error);
+        setListings([]);
+      }
 
-    setListings(savedListings ? JSON.parse(savedListings) : defaultListings);
-    setCurrentUser(savedUser ? JSON.parse(savedUser) : null);
-    setCurrentlyBooked(savedBookings ? JSON.parse(savedBookings) : {});
+      const savedUser = localStorage.getItem("homester-user");
+      const savedBookings = localStorage.getItem("homester-bookings");
+
+      setCurrentUser(savedUser ? JSON.parse(savedUser) : null);
+      setCurrentlyBooked(savedBookings ? JSON.parse(savedBookings) : {});
+    };
+
+    fetchData();
   }, []);
 
   const navigateTo = (page) => {
@@ -78,30 +64,8 @@ const HomeScreen = () => {
     setShowConfirmation(true);
   };
 
-  const addNewListing = (listingData) => {
-    if (!currentUser) {
-      setConfirmationMessage("Login first to add a listing.");
-      setShowConfirmation(true);
-      navigateTo("new-user");
-      return;
-    }
-
-    const newListing = {
-      id: Date.now(),
-      ...listingData,
-      location: "Los Angeles",
-      rating: (4 + Math.random() * 0.9).toFixed(2),
-      reviews: Math.floor(Math.random() * 50) + 10,
-      amenities: ["WiFi", "Kitchen", "Essentials"],
-      lat: 34.0522 + (Math.random() * 0.1 - 0.05),
-      lon: -118.2437 + (Math.random() * 0.1 - 0.05),
-      userId: currentUser.id,
-    };
-
-    const updatedListings = [newListing, ...listings];
-    setListings(updatedListings);
-    localStorage.setItem("homester-listings", JSON.stringify(updatedListings));
-
+  const addNewListing = (newListing) => {
+    setListings((prev) => [newListing, ...prev]);
     navigateTo("home");
     setConfirmationMessage("Listing added!");
     setShowConfirmation(true);
@@ -110,7 +74,7 @@ const HomeScreen = () => {
   const deleteListing = (id) => {
     const updated = listings.filter((l) => l.id !== id);
     setListings(updated);
-    localStorage.setItem("homester-listings", JSON.stringify(updated));
+    localStorage.setItem("homester-listings", JSON.stringify(updated)); // You can remove this if you don't want backup
   };
 
   const toggleBooking = (id) => {

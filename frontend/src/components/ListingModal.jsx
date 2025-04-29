@@ -8,7 +8,9 @@ const ListingModal = ({
   onBook,
   onClose,
 }) => {
-  const [mainImage, setMainImage] = useState(listing.images[0]);
+  const [mainImage, setMainImage] = useState(
+    listing.images ? listing.images[0] : null
+  );
 
   const changeMainImage = (img) => {
     setMainImage(img);
@@ -25,19 +27,26 @@ const ListingModal = ({
       <div className="modal-content bg-gray-800 mx-auto my-8 p-8 rounded-lg max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Image Section */}
         <div className="space-y-4">
-          <img
-            src={mainImage}
-            className="w-full object-cover rounded-lg"
-            alt={listing.title}
-          />
-          {listing.images.length > 1 && (
+          {/* Main Big Image */}
+          {mainImage && (
+            <img
+              src={mainImage}
+              className="w-full object-cover rounded-lg max-h-[400px]"
+              alt={listing.title}
+            />
+          )}
+
+          {/* Thumbnail Gallery */}
+          {listing.images && listing.images.length > 1 && (
             <div className="grid grid-cols-3 gap-2">
-              {listing.images.slice(1).map((img, i) => (
+              {listing.images.map((img, i) => (
                 <img
                   key={i}
                   src={img}
                   onClick={() => changeMainImage(img)}
-                  className="w-full h-24 object-cover rounded-lg cursor-pointer"
+                  className={`w-full h-24 object-cover rounded-lg cursor-pointer ${
+                    img === mainImage ? "ring-4 ring-blue-400" : ""
+                  }`}
                   alt={`img-${i}`}
                 />
               ))}
@@ -48,15 +57,21 @@ const ListingModal = ({
         {/* Details Section */}
         <div>
           <h2 className="text-3xl font-bold">{listing.title}</h2>
-          <div className="flex items-center mt-2">
-            <i className="fas fa-star text-yellow-400"></i>
-            <span className="ml-1">{listing.rating}</span>
-            <span className="ml-2 text-gray-400">
-              ({listing.reviews} reviews)
-            </span>
-          </div>
+
+          {/* (Optional Ratings - Skip if not available) */}
+          {listing.rating && (
+            <div className="flex items-center mt-2">
+              <i className="fas fa-star text-yellow-400"></i>
+              <span className="ml-1">{listing.rating}</span>
+              <span className="ml-2 text-gray-400">
+                ({listing.reviews} reviews)
+              </span>
+            </div>
+          )}
+
           <p className="mt-2 text-gray-300">{listing.description}</p>
           <p className="mt-4 text-gray-300 font-medium">{listing.address}</p>
+
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div>
               <p className="text-gray-400">Bedrooms</p>
@@ -72,20 +87,25 @@ const ListingModal = ({
             </div>
           </div>
 
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold">Amenities</h3>
-            <ul className="grid grid-cols-2 gap-2 mt-2 text-gray-300">
-              {listing.amenities.map((a, i) => (
-                <li key={i}>• {a}</li>
-              ))}
-            </ul>
-          </div>
+          {/* (Optional Amenities - Safe Check) */}
+          {listing.amenities && listing.amenities.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold">Amenities</h3>
+              <ul className="grid grid-cols-2 gap-2 mt-2 text-gray-300">
+                {listing.amenities.map((a, i) => (
+                  <li key={i}>• {a}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
+          {/* Price + Action Button */}
           <div className="mt-8 flex justify-between items-center">
             <div>
               <p className="text-2xl font-bold">${listing.price}/night</p>
               <p className="text-gray-400 text-sm">Includes taxes and fees</p>
             </div>
+
             {currentUser ? (
               isBooked ? (
                 <button

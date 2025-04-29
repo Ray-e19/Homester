@@ -14,7 +14,7 @@ L.Icon.Default.mergeOptions({
 const MapView = ({ listings = [], onMarkerClick }) => {
   return (
     <MapContainer
-      center={[34.0522, -118.2437]}
+      center={[34.0522, -118.2437]} // Default to Los Angeles
       zoom={12}
       scrollWheelZoom={true}
       style={{ height: "400px", width: "100%" }}
@@ -25,25 +25,31 @@ const MapView = ({ listings = [], onMarkerClick }) => {
         attribution="© OpenStreetMap contributors"
       />
 
-      {listings.map((listing) => (
-        <Marker key={listing.id} position={[listing.lat, listing.lon]}>
-          <Popup>
-            <div className="text-sm">
-              <button
-                onClick={() => onMarkerClick?.(listing.id)}
-                className="text-blue-500 font-semibold hover:underline"
-              >
-                {listing.title}
-              </button>
-              <div className="text-gray-600 mt-1">{listing.address}</div>
-              <div className="text-gray-700">
-                {listing.bedrooms} beds · {listing.bathrooms} baths ·{" "}
-                {listing.sqft} sqft
+      {/* Render pins only if lat/lon are valid */}
+      {listings.map((listing) =>
+        listing.lat !== null &&
+        listing.lat !== undefined &&
+        listing.lon !== null &&
+        listing.lon !== undefined ? (
+          <Marker key={listing.id} position={[listing.lat, listing.lon]}>
+            <Popup>
+              <div className="text-sm">
+                <button
+                  onClick={() => onMarkerClick?.(listing.id)}
+                  className="text-blue-500 font-semibold hover:underline"
+                >
+                  {listing.title}
+                </button>
+                <div className="text-gray-600 mt-1">{listing.address}</div>
+                <div className="text-gray-700">
+                  {listing.bedrooms} beds · {listing.bathrooms} baths ·{" "}
+                  {listing.sqft} sqft
+                </div>
               </div>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+            </Popup>
+          </Marker>
+        ) : null
+      )}
     </MapContainer>
   );
 };
