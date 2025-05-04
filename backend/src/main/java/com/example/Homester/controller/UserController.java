@@ -1,13 +1,20 @@
 package com.example.Homester.controller;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.Homester.model.User;
 import com.example.Homester.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
-import org.springframework.http.*;
 
 @RestController
 @RequestMapping("/users")
@@ -43,14 +50,12 @@ public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
     System.out.println("Email received: " + email);
     System.out.println("Password received: " + password);
 
-    Optional<User> optionalUser = userRepository.findByEmail(email);
+User user = userRepository.findByEmail(email);
 
-    if (optionalUser.isEmpty()) {
-        System.out.println("No user found for email: " + email);
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
-    }
+if (user == null) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
+}
 
-    User user = optionalUser.get();
     BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     System.out.println("Stored hash: " + user.getPassword());
