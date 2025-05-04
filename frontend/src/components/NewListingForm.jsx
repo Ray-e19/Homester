@@ -1,14 +1,15 @@
+// --- NewListingForm.jsx ---
 import React, { useState } from "react";
 import axios from "axios";
 
-const NewListingForm = ({ onSubmit, onCancel }) => {
+const NewListingForm = ({ currentUser, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
-    title: "",
     description: "",
     price: "",
     bedrooms: "",
     bathrooms: "",
     sqft: "",
+    yearBuilt: "",
     street: "",
     city: "",
     state: "",
@@ -31,38 +32,31 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
 
     const items = Array.from(e.dataTransfer.items);
 
-    items.forEach((item) => {
-      if (item.kind === "string" && item.type === "text/uri-list") {
-        item.getAsString((url) => {
-          console.log("Dropped URL:", url);
-
-          // Validate that it's a direct image URL
-          if (isValidImageUrl(url)) {
-            setFormData((prev) => ({
-              ...prev,
-              images: [...prev.images, url],
-            }));
-          } else {
-            console.warn("Ignored invalid image URL:", url);
-          }
+    Promise.all(
+      items.map((item) => {
+        return new Promise((resolve) => {
+          if (item.kind === "string" && item.type === "text/uri-list") {
+            item.getAsString((url) => {
+              if (isValidImageUrl(url)) resolve(url);
+              else resolve(null);
+            });
+          } else resolve(null);
         });
+      })
+    ).then((urls) => {
+      const validUrls = urls.filter((url) => url !== null);
+      if (validUrls.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, ...validUrls],
+        }));
       }
     });
   };
 
-  const isValidImageUrl = (url) => {
-    // Must start with http or https
-    if (!url.startsWith("http")) return false;
-
-    // Must end with common image extensions
-    return (
-      url.endsWith(".jpg") ||
-      url.endsWith(".jpeg") ||
-      url.endsWith(".png") ||
-      url.endsWith(".gif") ||
-      url.endsWith(".webp")
-    );
-  };
+  const isValidImageUrl = (url) =>
+    url.startsWith("http") &&
+    [".jpg", ".jpeg", ".png", ".gif", ".webp"].some((ext) => url.endsWith(ext));
 
   const addManualImage = () => {
     if (manualUrl.trim().startsWith("http")) {
@@ -79,31 +73,34 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
       fullAddress
     )}&format=json`;
+
     try {
-      const response = await axios.get(url, {
-        headers: { "Accept-Language": "en" },
-      });
+      const response = await axios.get(url);
       if (response.data && response.data.length > 0) {
         const { lat, lon } = response.data[0];
         return { lat: parseFloat(lat), lon: parseFloat(lon) };
       } else throw new Error("No results");
-    } catch (err) {
-      return { lat: 34.0537, lon: -118.2428 }; // LA City Hall fallback
+    } catch {
+      return { lat: 34.0537, lon: -118.2428 }; // fallback
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { lat, lon } = await geocodeAddress();
+    const fullAddress = `${formData.street}, ${formData.city}, ${formData.state} ${formData.zip}`;
     const listingData = {
       ...formData,
+      title: fullAddress,
+      address: fullAddress,
       price: parseInt(formData.price),
       bedrooms: parseInt(formData.bedrooms),
       bathrooms: parseInt(formData.bathrooms),
       sqft: parseInt(formData.sqft),
-      address: `${formData.street}, ${formData.city}, ${formData.state} ${formData.zip}`,
+      yearBuilt: parseInt(formData.yearBuilt),
       lat,
       lon,
+      userId: currentUser?.id,
     };
     const res = await axios.post("http://localhost:8080/houses", listingData);
     onSubmit(res.data);
@@ -113,97 +110,19 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
     <div className="container mx-auto px-4 mt-8">
       <h2 className="text-2xl font-bold mb-4">New Listing</h2>
       <form className="bg-gray-800 p-6 rounded-lg" onSubmit={handleSubmit}>
-        {/* Title */}
-        <div className="mb-4">
-          <label className="block text-gray-300">Title</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-700 rounded-lg bg-gray-900 text-gray-100"
-          />
-        </div>
-
-        {/* Description */}
-        <div className="mb-4">
-          <label className="block text-gray-300">Description</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-700 rounded-lg bg-gray-900 text-gray-100"
-          ></textarea>
-        </div>
-
-        {/* Price */}
-        <div className="mb-4">
-          <label className="block text-gray-300">Price per night ($)</label>
-          <input
-            type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-700 rounded-lg bg-gray-900 text-gray-100"
-          />
-        </div>
-
-        {/* Bedrooms */}
-        <div className="mb-4">
-          <label className="block text-gray-300">Bedrooms</label>
-          <input
-            type="number"
-            name="bedrooms"
-            value={formData.bedrooms}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-700 rounded-lg bg-gray-900 text-gray-100"
-          />
-        </div>
-
-        {/* Bathrooms */}
-        <div className="mb-4">
-          <label className="block text-gray-300">Bathrooms</label>
-          <input
-            type="number"
-            name="bathrooms"
-            value={formData.bathrooms}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-700 rounded-lg bg-gray-900 text-gray-100"
-          />
-        </div>
-
-        {/* Sqft */}
-        <div className="mb-4">
-          <label className="block text-gray-300">Area (sqft)</label>
-          <input
-            type="number"
-            name="sqft"
-            value={formData.sqft}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-700 rounded-lg bg-gray-900 text-gray-100"
-          />
-        </div>
-
-        {/* Address Fields */}
-        <div className="mb-4">
-          <label className="block text-gray-300">Street Address</label>
-          <input
-            type="text"
-            name="street"
-            value={formData.street}
-            onChange={handleChange}
-            placeholder="123 Main St"
-            required
-            className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
-          />
-        </div>
-        <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Address Section */}
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-300">Street Address</label>
+            <input
+              type="text"
+              name="street"
+              value={formData.street}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
+            />
+          </div>
           <div>
             <label className="block text-gray-300">City</label>
             <input
@@ -211,7 +130,6 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
               name="city"
               value={formData.city}
               onChange={handleChange}
-              placeholder="Los Angeles"
               required
               className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
             />
@@ -223,7 +141,6 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
               name="state"
               value={formData.state}
               onChange={handleChange}
-              placeholder="CA"
               required
               className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
             />
@@ -235,14 +152,73 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
               name="zip"
               value={formData.zip}
               onChange={handleChange}
-              placeholder="90012"
               required
               className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
             />
           </div>
         </div>
 
-        {/* Toggle */}
+        {/* Description */}
+        <div className="mb-4">
+          <label className="block text-gray-300">Description</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
+          />
+        </div>
+
+        {/* Price + Specs */}
+        <div className="mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-gray-300">Price ($)</label>
+            <input
+              type="number"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-300">Bedrooms</label>
+            <input
+              type="number"
+              name="bedrooms"
+              value={formData.bedrooms}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-300">Bathrooms</label>
+            <input
+              type="number"
+              name="bathrooms"
+              value={formData.bathrooms}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-300">Sqft</label>
+            <input
+              type="number"
+              name="sqft"
+              value={formData.sqft}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 border border-gray-700 rounded bg-gray-900 text-gray-100"
+            />
+          </div>
+        </div>
+
+        {/* Image Upload */}
         <div className="mb-4">
           <button
             type="button"
@@ -255,7 +231,7 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
             {inputMode === "drag" ? "Manual URL Input" : "Drag & Drop"}
           </button>
 
-          {inputMode === "drag" && (
+          {inputMode === "drag" ? (
             <div
               className={`border-2 ${
                 isDragging
@@ -269,14 +245,10 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
               onDragLeave={() => setIsDragging(false)}
             >
               <p>
-                {isDragging
-                  ? "Drop image URLs here"
-                  : "Drag online image URLs here"}
+                {isDragging ? "Drop image URLs here" : "Drag image URLs here"}
               </p>
             </div>
-          )}
-
-          {inputMode === "manual" && (
+          ) : (
             <div className="space-y-2">
               <input
                 type="url"
@@ -296,6 +268,7 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
           )}
         </div>
 
+        {/* Preview Thumbnails */}
         {formData.images.length > 0 && (
           <div className="flex flex-wrap gap-4 mb-4">
             {formData.images.map((url, i) => (
@@ -309,6 +282,7 @@ const NewListingForm = ({ onSubmit, onCancel }) => {
           </div>
         )}
 
+        {/* Actions */}
         <div className="flex justify-end space-x-4">
           <button
             type="button"
