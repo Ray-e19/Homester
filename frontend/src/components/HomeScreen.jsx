@@ -1,3 +1,4 @@
+// --- HomeScreen.jsx ---
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -9,6 +10,7 @@ import NewListingForm from "./NewListingForm";
 import LoginForm from "./LoginForm";
 import ListingModal from "./ListingModal";
 import ConfirmationModal from "./ConfirmationModal";
+import ProfilePage from "./ProfilePage";
 
 const HomeScreen = () => {
   const [activePage, setActivePage] = useState("home");
@@ -20,6 +22,10 @@ const HomeScreen = () => {
   const [currentListing, setCurrentListing] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [liked, setLiked] = useState(() => {
+    const saved = localStorage.getItem("homester-liked");
+    return saved ? JSON.parse(saved) : {};
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,70 +47,44 @@ const HomeScreen = () => {
     fetchData();
   }, []);
 
-  const navigateTo = (page) => {
-    setActivePage(page);
+  const toggleLike = async (id) => {
+    const updated = { ...liked };
+    if (updated[id]) {
+      delete updated[id];
+    } else {
+      updated[id] = true;
+    }
+    setLiked(updated);
+    localStorage.setItem("homester-liked", JSON.stringify(updated));
+
+    if (currentUser) {
+      try {
+        await axios.post("http://localhost:8080/likes", {
+          userId: currentUser.id,
+          houseId: id,
+        });
+      } catch (err) {
+        console.error("Failed to sync like:", err);
+      }
+    }
   };
+
+  const saveMessage = async (messageData) => {
+    try {
+      await axios.post("http://localhost:8080/messages", messageData);
+      setConfirmationMessage("Message sent!");
+      setShowConfirmation(true);
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setConfirmationMessage("Failed to send message");
+      setShowConfirmation(true);
+    }
+  };
+
+  const navigateTo = (page) => setActivePage(page);
 
   const handleSearch = () => {
     setConfirmationMessage(`Search: ${searchQuery}`);
-    setShowConfirmation(true);
-  };
-
-  const createNewUser = (userData) => {
-    const newUser = {
-      id: Date.now(),
-      name: userData.username,
-      email: userData.email,
-    };
-
-    localStorage.setItem("homester-user", JSON.stringify(newUser));
-    setCurrentUser(newUser);
-    navigateTo("home");
-    setConfirmationMessage("Account created!");
-    setShowConfirmation(true);
-  };
-
-  const addNewListing = (newListing) => {
-    setListings((prev) => [newListing, ...prev]);
-    navigateTo("home");
-    setConfirmationMessage("Listing added!");
-    setShowConfirmation(true);
-  };
-
-  const deleteListing = (id) => {
-    const updated = listings.filter((l) => l.id !== id);
-    setListings(updated);
-    localStorage.setItem("homester-listings", JSON.stringify(updated)); // You can remove this if you don't want backup
-  };
-
-  const toggleBooking = (id) => {
-    const updated = { ...currentlyBooked };
-    if (updated[id]) {
-      delete updated[id];
-      setConfirmationMessage("Booking canceled.");
-    } else {
-      updated[id] = { userId: currentUser.id, date: new Date().toISOString() };
-      setConfirmationMessage("Booking confirmed!");
-    }
-
-    setCurrentlyBooked(updated);
-    localStorage.setItem("homester-bookings", JSON.stringify(updated));
-    setShowListingModal(false);
-    setShowConfirmation(true);
-  };
-
-  const showListingDetails = (id) => {
-    const listing = listings.find((l) => l.id === id);
-    if (listing) {
-      setCurrentListing(listing);
-      setShowListingModal(true);
-    }
-  };
-
-  const logout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem("homester-user");
-    setConfirmationMessage("Logged out.");
     setShowConfirmation(true);
   };
 
@@ -114,7 +94,13 @@ const HomeScreen = () => {
       <NavBar
         currentUser={currentUser}
         navigateTo={navigateTo}
-        logout={logout}
+        logout={() => {
+          setCurrentUser(null);
+          localStorage.removeItem("homester-user");
+          setActivePage("home");
+          setConfirmationMessage("Logged out.");
+          setShowConfirmation(true);
+        }}
       />
 
       {activePage === "home" && (
@@ -125,14 +111,43 @@ const HomeScreen = () => {
           listings={listings}
           currentUser={currentUser}
           currentlyBooked={currentlyBooked}
-          showListingDetails={showListingDetails}
-          deleteListing={deleteListing}
+          showListingDetails={(id) => {
+            const listing = listings.find((l) => l.id === id);
+            if (listing) {
+              setCurrentListing(listing);
+              setShowListingModal(true);
+            }
+          }}
+          deleteListing={(id) => {
+            const updated = listings.filter((l) => l.id !== id);
+            setListings(updated);
+          }}
+          liked={liked}
+          toggleLike={toggleLike}
+        />
+      )}
+
+      {currentUser && activePage === "new-listing" && (
+        <NewListingForm
+          onSubmit={(newListing) => {
+            setListings([...listings, newListing]);
+            navigateTo("home");
+            setConfirmationMessage("New listing added!");
+            setShowConfirmation(true);
+          }}
+          onCancel={() => navigateTo("home")}
         />
       )}
 
       {activePage === "new-user" && (
         <NewUserForm
-          onCreateUser={createNewUser}
+          onCreateUser={(user) => {
+            localStorage.setItem("homester-user", JSON.stringify(user));
+            setCurrentUser(user);
+            navigateTo("home");
+            setConfirmationMessage("User created!");
+            setShowConfirmation(true);
+          }}
           onCancel={() => navigateTo("home")}
         />
       )}
@@ -150,10 +165,18 @@ const HomeScreen = () => {
         />
       )}
 
-      {activePage === "new-listing" && (
-        <NewListingForm
-          onSubmit={addNewListing}
-          onCancel={() => navigateTo("home")}
+      {currentUser && activePage === "profile" && (
+        <ProfilePage
+          currentUser={currentUser}
+          liked={liked}
+          listings={listings}
+          showListingDetails={(id) => {
+            const listing = listings.find((l) => l.id === id);
+            if (listing) {
+              setCurrentListing(listing);
+              setShowListingModal(true);
+            }
+          }}
         />
       )}
 
@@ -165,7 +188,9 @@ const HomeScreen = () => {
             currentUser && currentListing.userId === currentUser.id
           }
           currentUser={currentUser}
-          onBook={() => toggleBooking(currentListing.id)}
+          liked={liked}
+          toggleLike={toggleLike}
+          onSaveMessage={saveMessage}
           onClose={() => setShowListingModal(false)}
         />
       )}

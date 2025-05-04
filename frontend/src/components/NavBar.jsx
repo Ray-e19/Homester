@@ -1,3 +1,6 @@
+// --- NavBar.jsx ---
+import React from "react";
+
 const NavBar = ({ currentUser, navigateTo, logout }) => {
   return (
     <nav className="bg-gray-800 shadow-md py-4">
@@ -16,6 +19,7 @@ const NavBar = ({ currentUser, navigateTo, logout }) => {
               </span>
             </li>
           )}
+
           {!currentUser && (
             <li>
               <button
@@ -40,10 +44,10 @@ const NavBar = ({ currentUser, navigateTo, logout }) => {
           {currentUser && (
             <li>
               <button
-                onClick={() => navigateTo("new-listing")}
+                onClick={() => navigateTo("profile")}
                 className="text-lg text-gray-300 hover:text-blue-500"
               >
-                New Listing
+                Profile
               </button>
             </li>
           )}

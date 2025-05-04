@@ -1,3 +1,4 @@
+import { useState } from "react";
 import MapView from "./MapView";
 
 const HomePage = ({
@@ -9,38 +10,105 @@ const HomePage = ({
   currentlyBooked,
   showListingDetails,
   deleteListing,
+  liked,
+  toggleLike,
 }) => {
+  const [maxPrice, setMaxPrice] = useState("");
+  const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
+
+  const filteredListings = listings.filter((listing) => {
+    const matchesSearch =
+      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.address.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesPrice = maxPrice === "" || listing.price <= parseInt(maxPrice);
+
+    const matchesBedrooms =
+      bedrooms === "" || listing.bedrooms >= parseInt(bedrooms);
+
+    const matchesBathrooms =
+      bathrooms === "" || listing.bathrooms >= parseInt(bathrooms);
+
+    return matchesSearch && matchesPrice && matchesBedrooms && matchesBathrooms;
+  });
+
   return (
     <main id="home-page">
       <div className="container mx-auto px-4 mt-8">
-        {/* Search Bar */}
-        <div className="flex justify-center">
+        {/* Filters Bar */}
+        <div className="flex flex-wrap justify-center items-center gap-4 mb-6">
           <input
             type="text"
             placeholder="Search by city or address..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full max-w-md px-4 py-2 border border-gray-700 rounded-lg shadow-sm bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-60 px-4 py-2 border border-gray-700 rounded-lg shadow-sm bg-gray-800 text-gray-100"
           />
+
+          <input
+            type="number"
+            placeholder="Max Price"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="w-36 px-4 py-2 border border-gray-700 rounded-lg bg-gray-800 text-gray-100"
+          />
+
+          <select
+            value={bedrooms}
+            onChange={(e) => setBedrooms(e.target.value)}
+            className="px-4 py-2 border border-gray-700 rounded-lg bg-gray-800 text-gray-100"
+          >
+            <option value="">Bedrooms</option>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n}+
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={bathrooms}
+            onChange={(e) => setBathrooms(e.target.value)}
+            className="px-4 py-2 border border-gray-700 rounded-lg bg-gray-800 text-gray-100"
+          >
+            <option value="">Bathrooms</option>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n}+
+              </option>
+            ))}
+          </select>
+
           <button
             onClick={handleSearch}
-            className="ml-4 bg-blue-500 text-white px-4 py-2 rounded-lg"
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg"
           >
             Search
           </button>
+
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setMaxPrice("");
+              setBedrooms("");
+              setBathrooms("");
+            }}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg"
+          >
+            Clear
+          </button>
         </div>
 
-        {/* Map */}
-        <MapView listings={listings} onMarkerClick={showListingDetails} />
+        <MapView
+          listings={filteredListings}
+          onMarkerClick={showListingDetails}
+        />
 
-        {/* Property Listings */}
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Property Listings</h2>
-          <div
-            id="propertyList"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {listings.map((listing) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredListings.map((listing) => {
               const isBooked = currentlyBooked[listing.id];
               const isUserListing =
                 currentUser && listing.userId === currentUser.id;
@@ -51,61 +119,44 @@ const HomePage = ({
                   className="airbnb-card bg-gray-800 rounded-xl overflow-hidden relative hover:transform hover:-translate-y-1 transition-transform cursor-pointer"
                   onClick={() => showListingDetails(listing.id)}
                 >
-                  {isUserListing && (
-                    <button
-                      className="delete-btn absolute top-3 right-3 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center z-10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteListing(listing.id);
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
-
                   {isBooked && (
-                    <div className="unavailable-badge absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs">
+                    <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs">
                       Booked
                     </div>
                   )}
-
                   <div className="relative">
-                    {/* Heart Icon */}
                     <div className="absolute top-3 right-3 z-10">
-                      <i className="far fa-heart text-white text-xl drop-shadow"></i>
+                      <i
+                        className={`${
+                          liked[listing.id] ? "fas" : "far"
+                        } fa-heart text-white text-xl drop-shadow cursor-pointer`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleLike(listing.id);
+                        }}
+                      ></i>
                     </div>
-
-                    {/* Image */}
                     <img
                       src={
                         listing.images?.[0] ||
                         "https://placehold.co/400x200?text=No+Image"
                       }
+                      className="w-full h-48 object-cover"
+                      alt={listing.title}
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src =
                           "https://placehold.co/400x200?text=No+Image";
                       }}
-                      className="w-full h-48 object-cover"
-                      alt={listing.title}
                     />
-
-                    {/* Price Tag */}
-                    <div className="absolute bottom-3 left-3 price-tag bg-black bg-opacity-70 text-white px-2 py-1 rounded-md text-xs font-medium">
-                      ${listing.price}/night
+                    <div className="absolute bottom-3 left-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded-md text-xs font-medium">
+                      ${listing.price.toLocaleString()}
                     </div>
                   </div>
-
                   <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-semibold text-white">
-                        {listing.title}
-                      </h3>
-                      <div className="flex items-center text-sm font-medium">
-                        <i className="fas fa-star mr-1 text-yellow-400"></i>
-                        <span className="text-white">{listing.rating}</span>
-                      </div>
-                    </div>
+                    <h3 className="font-semibold text-white">
+                      {listing.title}
+                    </h3>
                     <p className="text-gray-400 text-sm mt-1">
                       {listing.location}
                     </p>

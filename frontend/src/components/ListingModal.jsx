@@ -1,19 +1,93 @@
-import { useState } from "react";
+// --- ListingModal.jsx ---
+import { useState, useEffect } from "react";
 
 const ListingModal = ({
-  listing,
-  isBooked,
-  isUserListing,
-  currentUser,
-  onBook,
-  onClose,
+  listing = {},
+  isUserListing = false,
+  currentUser = null,
+  onClose = () => {},
+  liked = {},
+  toggleLike = () => {},
+  onSaveMessage = () => {},
+  onMessageSent = () => {},
 }) => {
-  const [mainImage, setMainImage] = useState(
-    listing.images ? listing.images[0] : null
-  );
+  const [mainImage, setMainImage] = useState(null);
+  const [showTourForm, setShowTourForm] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [tourDate, setTourDate] = useState("");
+  const [tourTime, setTourTime] = useState("");
+  const [message, setMessage] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({ ...listing });
 
-  const changeMainImage = (img) => {
-    setMainImage(img);
+  useEffect(() => {
+    if (listing.images?.length > 0) {
+      setMainImage(listing.images[0]);
+    }
+  }, [listing]);
+
+  const getTomorrow = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
+  };
+
+  const handleTourRequest = async () => {
+    const tourInfo = {
+      type: "tour",
+      houseId: listing.id,
+      userId: currentUser?.id,
+      requestedDate: tourDate,
+      requestedTime: tourTime,
+      datetime: new Date().toISOString(),
+    };
+    await onSaveMessage(tourInfo);
+    setShowTourForm(false);
+    onMessageSent();
+  };
+
+  const handleContactMessage = async () => {
+    const msg = {
+      type: "contact",
+      houseId: listing.id,
+      userId: currentUser?.id,
+      message,
+      datetime: new Date().toISOString(),
+    };
+    await onSaveMessage(msg);
+    setShowContactForm(false);
+    onMessageSent();
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    await fetch(`http://localhost:8080/houses/${listing.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+    setIsEditing(false);
+    window.location.reload();
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this listing?")) {
+      try {
+        const res = await fetch(`http://localhost:8080/houses/${listing.id}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          alert("Listing deleted.");
+          onClose();
+          window.location.reload();
+        } else {
+          alert("Failed to delete listing.");
+        }
+      } catch (err) {
+        console.error("Delete failed:", err);
+        alert("Error deleting listing.");
+      }
+    }
   };
 
   return (
@@ -25,25 +99,21 @@ const ListingModal = ({
         &times;
       </div>
       <div className="modal-content bg-gray-800 mx-auto my-8 p-8 rounded-lg max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Image Section */}
         <div className="space-y-4">
-          {/* Main Big Image */}
           {mainImage && (
             <img
               src={mainImage}
               className="w-full object-cover rounded-lg max-h-[400px]"
-              alt={listing.title}
+              alt={listing.title || "Listing Image"}
             />
           )}
-
-          {/* Thumbnail Gallery */}
-          {listing.images && listing.images.length > 1 && (
+          {listing.images?.length > 1 && (
             <div className="grid grid-cols-3 gap-2">
               {listing.images.map((img, i) => (
                 <img
                   key={i}
                   src={img}
-                  onClick={() => changeMainImage(img)}
+                  onClick={() => setMainImage(img)}
                   className={`w-full h-24 object-cover rounded-lg cursor-pointer ${
                     img === mainImage ? "ring-4 ring-blue-400" : ""
                   }`}
@@ -54,88 +124,202 @@ const ListingModal = ({
           )}
         </div>
 
-        {/* Details Section */}
         <div>
-          <h2 className="text-3xl font-bold">{listing.title}</h2>
+          <div className="flex justify-between items-start">
+            {isEditing ? (
+              <input
+                className="text-3xl font-bold bg-gray-700 text-white p-2 rounded w-full"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+              />
+            ) : (
+              <h2 className="text-3xl font-bold">{listing.title}</h2>
+            )}
+            <i
+              className={`${
+                liked[listing.id] ? "fas" : "far"
+              } fa-heart text-white text-2xl cursor-pointer ml-4`}
+              onClick={() => toggleLike(listing.id)}
+            ></i>
+          </div>
 
-          {/* (Optional Ratings - Skip if not available) */}
-          {listing.rating && (
-            <div className="flex items-center mt-2">
-              <i className="fas fa-star text-yellow-400"></i>
-              <span className="ml-1">{listing.rating}</span>
-              <span className="ml-2 text-gray-400">
-                ({listing.reviews} reviews)
-              </span>
-            </div>
+          {isEditing ? (
+            <textarea
+              className="mt-2 w-full bg-gray-700 text-white p-2 rounded"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+            />
+          ) : (
+            <p className="mt-2 text-gray-300">{listing.description}</p>
           )}
 
-          <p className="mt-2 text-gray-300">{listing.description}</p>
+          <p className="text-sm text-gray-500">House ID: {listing.id}</p>
           <p className="mt-4 text-gray-300 font-medium">{listing.address}</p>
 
           <div className="grid grid-cols-3 gap-4 mt-6">
-            <div>
-              <p className="text-gray-400">Bedrooms</p>
-              <p>{listing.bedrooms}</p>
-            </div>
-            <div>
-              <p className="text-gray-400">Bathrooms</p>
-              <p>{listing.bathrooms}</p>
-            </div>
-            <div>
-              <p className="text-gray-400">Area</p>
-              <p>{listing.sqft} sqft</p>
-            </div>
+            {["bedrooms", "bathrooms", "sqft"].map((field) => (
+              <div key={field}>
+                <p className="text-gray-400">
+                  {field.charAt(0).toUpperCase() + field.slice(1)}
+                </p>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    className="bg-gray-700 text-white rounded px-2 py-1 w-full"
+                    value={formData[field] || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        [field]: parseInt(e.target.value),
+                      })
+                    }
+                  />
+                ) : (
+                  <p>
+                    {listing[field]}
+                    {field === "sqft" ? " sqft" : ""}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* (Optional Amenities - Safe Check) */}
-          {listing.amenities && listing.amenities.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold">Amenities</h3>
-              <ul className="grid grid-cols-2 gap-2 mt-2 text-gray-300">
-                {listing.amenities.map((a, i) => (
-                  <li key={i}>• {a}</li>
+          <div className="mt-8">
+            {isEditing ? (
+              <input
+                type="number"
+                className="w-full bg-gray-700 text-white rounded px-4 py-2"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: parseInt(e.target.value) })
+                }
+              />
+            ) : (
+              <p className="text-2xl font-bold">
+                ${listing.price?.toLocaleString()}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-6 space-x-4">
+            {isUserListing ? (
+              isEditing ? (
+                <>
+                  <button
+                    onClick={handleEditSubmit}
+                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium"
+                  >
+                    Edit Listing
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium"
+                  >
+                    Delete Listing
+                  </button>
+                </>
+              )
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowTourForm(!showTourForm)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium"
+                >
+                  Request a Tour
+                </button>
+                <button
+                  onClick={() => setShowContactForm(!showContactForm)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium"
+                >
+                  Contact
+                </button>
+              </>
+            )}
+          </div>
+
+          {showTourForm && (
+            <div className="mt-4">
+              <input
+                type="date"
+                min={getTomorrow()}
+                value={tourDate}
+                onChange={(e) => setTourDate(e.target.value)}
+                className="bg-gray-700 text-white rounded px-4 py-2 mr-2"
+              />
+              <input
+                type="time"
+                list="halfHourSteps"
+                value={tourTime}
+                onChange={(e) => setTourTime(e.target.value)}
+                className="bg-gray-700 text-white rounded px-4 py-2 mr-2"
+              />
+              <datalist id="halfHourSteps">
+                {[
+                  "09:00",
+                  "09:30",
+                  "10:00",
+                  "10:30",
+                  "11:00",
+                  "11:30",
+                  "12:00",
+                  "12:30",
+                  "13:00",
+                  "13:30",
+                  "14:00",
+                  "14:30",
+                  "15:00",
+                  "15:30",
+                  "16:00",
+                  "16:30",
+                ].map((t) => (
+                  <option key={t} value={t} />
                 ))}
-              </ul>
+              </datalist>
+              <button
+                onClick={handleTourRequest}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+              >
+                Submit Tour Request
+              </button>
             </div>
           )}
 
-          {/* Price + Action Button */}
-          <div className="mt-8 flex justify-between items-center">
-            <div>
-              <p className="text-2xl font-bold">${listing.price}/night</p>
-              <p className="text-gray-400 text-sm">Includes taxes and fees</p>
-            </div>
-
-            {currentUser ? (
-              isBooked ? (
-                <button
-                  onClick={onBook}
-                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium"
-                >
-                  Cancel Booking
-                </button>
-              ) : (
-                <button
-                  onClick={onBook}
-                  disabled={isUserListing}
-                  className={`${
-                    isUserListing
-                      ? "bg-gray-500"
-                      : "bg-blue-500 hover:bg-blue-600"
-                  } text-white px-6 py-3 rounded-lg font-medium`}
-                >
-                  {isUserListing ? "Your Listing" : "Book Now"}
-                </button>
-              )
-            ) : (
+          {showContactForm && (
+            <div className="mt-4">
+              <textarea
+                rows="3"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Write your message here..."
+                className="w-full bg-gray-700 text-white rounded px-4 py-2 mb-2"
+              ></textarea>
               <button
-                onClick={onClose}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium"
+                onClick={handleContactMessage}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
               >
-                Create Account to Book
+                Send Message
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
